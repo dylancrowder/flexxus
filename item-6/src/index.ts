@@ -5,12 +5,15 @@ import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
 import session from "express-session";
+import swaggerJsDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 // Importación de rutas y utilidades
 import articleRoutes from "./routes/article.routes";
 import AppError from "./utilitis/appError";
 import errorHandler from "./middlewares/middleware.error";
 import authRoute from "./routes/auth.routes";
+import { swaggerOptions } from "./utilitis/documentation/swagger.config";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -34,6 +37,10 @@ app.use(
     },
   })
 );
+
+// Documentacion Swagger
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware de manejo de errores
 app.use(errorHandler);
