@@ -1,6 +1,8 @@
 import { connectToDatabase } from "../db/db_connect";
+import { CustomError } from "../utilitis/error/customError";
 
 export class ArticleModel {
+  //Filtrar Articulos
   static async findArticlesByFilters(
     name?: string,
     isActive?: boolean,
@@ -28,8 +30,11 @@ export class ArticleModel {
       const [rows] = await dbConnect.query(query, params);
       return rows;
     } catch (error) {
-      console.error("Error al obtener artículos:", error);
-      throw new Error("Error en la base de datos");
+      throw new CustomError(
+        "Error al conectar con la base de datos.",
+        500,
+        error
+      );
     }
   }
 }

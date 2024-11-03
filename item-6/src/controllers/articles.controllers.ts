@@ -1,24 +1,24 @@
 import { NextFunction, Request, Response } from "express";
 import { ArticleModel } from "../models/model.article";
-import AppError from "../utilitis/appError";
 import Joi from "joi";
-import { Article } from "../interfaces/article.interface";
+
 import { articleSchema, querySchema } from "../utilitis/joi";
+import { CustomError } from "../utilitis/error/customError";
 
 export class ArticleController {
   static async getByFilters(req: Request, res: Response, next: NextFunction) {
     const { name, is_active, exact_match } = req.query;
 
-    // Validar los parámetros de consulta
+    //Validar parametros
     const { error } = querySchema.validate(req.query);
     if (error) {
       return next(
-        new AppError(`Parámetros de consulta inválidos: ${error.message}`, 400)
+        new CustomError(`Parametros faltantes en la consulta`, 400, error)
       );
     }
 
     const isExactMatch = exact_match === "true";
-
+    // Buscar Articulos
     try {
       const articles: any = await ArticleModel.findArticlesByFilters(
         name as string | undefined,
@@ -27,25 +27,33 @@ export class ArticleController {
       );
 
       if (articles.length === 0) {
-        return next(new AppError("No se encontraron artículos", 404));
+        return next(
+          new CustomError(
+            "No se encontraron productos con los criterios de búsqueda especificados.",
+            404,
+            "el array no contiene nada"
+          )
+        );
       }
 
-      // Validar la respuesta antes de enviarla
       const validationResult = Joi.array()
         .items(articleSchema)
         .validate(articles);
       if (validationResult.error) {
         return next(
-          new AppError(
-            `Error en la estructura de los datos de respuesta: ${validationResult.error.message}`,
-            500
+          new CustomError(
+            `Error al validar productos.`,
+            400,
+            validationResult.error
           )
         );
       }
 
       res.status(200).json(articles);
     } catch (error: any) {
-      next(new AppError("Error al obtener artículos", 500));
+      console.log(error);
+
+      next(new CustomError(`Error inesperado ${error}`, 500, error));
     }
   }
 }

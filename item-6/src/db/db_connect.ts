@@ -1,21 +1,34 @@
-import mysql, { Connection } from "mysql2/promise";
+import mysql from "mysql2/promise";
+import { CustomError } from "../utilitis/error/customError";
+import dotenv from "dotenv";
 
-let dbConnect: Connection | null = null;
+dotenv.config();
 
-async function connectToDatabase(): Promise<Connection> {
+let dbConnect: mysql.Connection | null = null;
+
+async function connectToDatabase(): Promise<mysql.Connection> {
   if (!dbConnect) {
     try {
       dbConnect = await mysql.createConnection({
-        host: "127.0.0.1",
-        user: "root",
-        password: "123456789",
-        database: "articulos",
-        port: 3306,
+        host: process.env.DB_HOST_NAME,
+        user: process.env.DB_USER_NAME,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || "3306"),
+        ssl: {
+          rejectUnauthorized: true,
+          ca: process.env.CA_CERTIFICATE,
+        },
       });
       console.log("Conexión a la base de datos establecida correctamente.");
     } catch (error) {
-      console.error("Error al conectar a la base de datos:", error);
-      throw error;
+      dbConnect = null;
+      console.error(error);
+      throw new CustomError(
+        "Error al conectarse a la base de datos",
+        500,
+        error
+      );
     }
   }
   return dbConnect;

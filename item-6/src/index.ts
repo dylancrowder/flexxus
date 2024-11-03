@@ -5,15 +5,13 @@ import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
 import session from "express-session";
-import swaggerJsDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
+import { swaggerDocs } from "./utilitis/documentation/swagger.config";
 
 // Importación de rutas y utilidades
 import articleRoutes from "./routes/article.routes";
-import AppError from "./utilitis/appError";
-import errorHandler from "./middlewares/middleware.error";
 import authRoute from "./routes/auth.routes";
-import { swaggerOptions } from "./utilitis/documentation/swagger.config";
+import { errorHandler } from "./middlewares/error.middleware";
 
 // Cargar variables de entorno
 dotenv.config();
@@ -38,24 +36,23 @@ app.use(
   })
 );
 
-// Documentacion Swagger
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
+// Definición de rutas
+app.use("/api/v1", articleRoutes);
+app.use("/auth", authRoute);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Manejo de rutas no encontradas
+app.use((req, res, next) => {
+  res.status(404).json({
+    error: "pagina no encontrada",
+    message: `No se encontró la ruta ${req.originalUrl}`,
+  });
+});
 
 // Middleware de manejo de errores
 app.use(errorHandler);
 
-// Definición de rutas
-app.use("/api/v1", articleRoutes);
-app.use("/auth", authRoute);
-
-// Manejo de rutas no encontradas
-app.all("*", (req, res, next) => {
-  next(
-    new AppError(`No se puede encontrar ${req.originalUrl} en esta ruta`, 404)
-  );
-});
-
+// Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`El servidor está corriendo en el puerto: ${PORT}`);
 });
