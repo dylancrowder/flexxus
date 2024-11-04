@@ -1,13 +1,20 @@
 import { NextFunction, Request, Response } from "express";
-import { ArticleModel } from "../models/model.article";
 import Joi from "joi";
 
-import { articleSchema, querySchema } from "../utilitis/joi";
+import { ArticleModel } from "../models/model.article";
+import {
+  articleSchema,
+  articleSchemaCreate,
+  querySchema,
+  updateQuery,
+} from "../utilitis/joi";
 import { CustomError } from "../utilitis/error/customError";
+import { Article } from "../interfaces/article.interface";
 
 export class ArticleController {
+  // Buscar
   static async getByFilters(req: Request, res: Response, next: NextFunction) {
-    const { name, is_active, exact_match } = req.query;
+    const { nombre, is_active, exact_match } = req.query;
 
     //Validar parametros
     const { error } = querySchema.validate(req.query);
@@ -18,10 +25,11 @@ export class ArticleController {
     }
 
     const isExactMatch = exact_match === "true";
-    // Buscar Articulos
+
     try {
+      // Buscar Articulos DB
       const articles: any = await ArticleModel.findArticlesByFilters(
-        name as string | undefined,
+        nombre as string | undefined,
         is_active === "true",
         isExactMatch
       );
@@ -35,7 +43,7 @@ export class ArticleController {
           )
         );
       }
-
+      // Validar resultado
       const validationResult = Joi.array()
         .items(articleSchema)
         .validate(articles);
@@ -51,9 +59,112 @@ export class ArticleController {
 
       res.status(200).json(articles);
     } catch (error: any) {
-      console.log(error);
+      next(new CustomError(`Error inesperado`, 500, error));
+    }
+  }
 
-      next(new CustomError(`Error inesperado ${error}`, 500, error));
+  // Crear
+  static async create(req: Request, res: Response, next: NextFunction) {
+    const { nombre, marca } = req.body;
+
+    // Validar datos del artículo
+    const { error } = articleSchemaCreate.validate(req.body);
+    if (error) {
+      return next(
+        new CustomError(`Todos los parámetros son requeridos`, 400, error)
+      );
+    }
+
+    try {
+      const result: any = await ArticleModel.createArticle(nombre, marca);
+      const newArticle = {
+        id: result.insertId,
+        nombre: nombre,
+        marca: marca,
+        estado: true,
+      };
+
+      res.status(201).json({
+        message: "Artículo creado exitosamente",
+        newArticle: newArticle,
+      });
+    } catch (error: any) {
+      console.error(error);
+      next(new CustomError(`Error al crear el artículo`, 500, error));
+    }
+  }
+
+  // Actualizar
+  static async update(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+
+    // Validar el body
+    const { error } = updateQuery.validate(req.body);
+    if (error) {
+      return next(
+        new CustomError("Error en los parametros enviados", 400, error)
+      );
+    }
+
+    try {
+      const updates: Partial<Article> = req.body;
+      const result: any = await ArticleModel.updateArticle(
+        parseInt(id),
+        updates
+      );
+      if (result.affectedRows === 0) {
+        return next(
+          new CustomError(
+            "No se encontró el artículo para actualizar.",
+            404,
+            "err"
+          )
+        );
+      }
+      res.status(200).json({ message: "Artículo actualizado exitosamente." });
+    } catch (error: any) {
+      next(
+        new CustomError(
+          `Error al actualizar el artículo: ${error.message}`,
+          500,
+          error
+        )
+      );
+    }
+  }
+
+  // Desactivar
+  static async deactivate(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
+
+    // Validar que el ID sea un número
+    const { error } = Joi.number().required().validate(Number(id));
+    if (error) {
+      return next(
+        new CustomError(`El ID debe ser un número válido`, 400, error)
+      );
+    }
+
+    try {
+      const result: any = await ArticleModel.deactivateArticle(Number(id));
+
+      // Si el artículo no existe lanzar un error
+      if (!result) {
+        return next(new CustomError(`Artículo no encontrado`, 404, result));
+      }
+
+      res.status(200).json({
+        message: "Artículo desactivado exitosamente",
+        article: {
+          id: result.id,
+          nombre: result.nombre,
+          marca: result.marca,
+          estado: result.estado,
+        },
+      });
+    } catch (error: any) {
+      console.error(error);
+      next(new CustomError(`Error al desactivar el artículo`, 500, error));
     }
   }
 }

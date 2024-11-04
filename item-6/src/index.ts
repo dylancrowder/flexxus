@@ -6,7 +6,7 @@ import cors from "cors";
 import compression from "compression";
 import session from "express-session";
 import swaggerUi from "swagger-ui-express";
-import { swaggerDocs } from "./utilitis/documentation/swagger.config";
+import { swaggerDocs } from "./documentation/swagger.config";
 
 // Importación de rutas y utilidades
 import articleRoutes from "./routes/article.routes";
